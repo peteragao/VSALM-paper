@@ -24,7 +24,23 @@ summarize_res <- function(res) {
               cov90 = mean(lower < pop_mean & upper > pop_mean),
               int_len = mean(upper - lower))
 }
-
+pub_names <- rbind(
+  c("Hajek", "Direct (Hájek)"),
+  c("iidMeanSmooth", "MS"),
+  c("iidMeanSmoothLogit", "Logit MS"),
+  c("iidMeanSmoothUnmatched", "Unmatched MS"),
+  c("spatialMeanSmooth", "Spatial MS"),
+  c("spatialMeanSmoothLogit", "Spatial Logit MS"),
+  c("spatialMeanSmoothUnmatched", "Spatial Unmatched MS"),
+  c("iidJointSmooth", "JS"),
+  c("iidJointSmoothLogit", "Logit JS"),
+  c("iidJointSmoothUnmatched", "Unmatched JS"),
+  c("spatialJointSmooth", "Spatial JS"),
+  c("spatialJointSmoothLogit", "Spatial Logit JS"),
+  c("spatialJointSmoothUnmatched", "Spatial Unmatched JS")
+) %>%
+  as.data.frame() %>%
+  setNames(c("internal", "publication")) 
 pub_order <- c(
   "Hajek",
   "iidMeanSmooth",
@@ -58,6 +74,8 @@ fmt_tbl <- function(res, methods = unique(res$method),
                     rows = NULL) {
   res <- res %>%
     filter(method %in% methods) %>%
+    mutate(method = 
+             pub_names$publication[match(method, pub_names$internal)]) %>%
     arrange(match(method, pub_order)) %>%
     mutate(rmse = rmse * 100, abs_bias = abs_bias * 100, 
            int_len = int_len * 100, cov90 = cov90 * 100) %>%
@@ -87,7 +105,8 @@ spa_res <-
                 readRDS(paste0(sim_res_dir, "area-level-model_res_", x, ".rds"))
               }
             })) 
-fmt_tbl(summarize_res(spa_res)) %>% writeLines("paper/figures/area-level-model-res.tex")
+fmt_tbl(summarize_res(spa_res), methods = selected_methods) %>%
+  writeLines("paper/figures/area-level-model-res.tex")
 loprev_spa_res <- 
   do.call(rbind,
           lapply(
@@ -97,4 +116,22 @@ loprev_spa_res <-
                 readRDS(paste0(sim_res_dir, "loprev-area-level-model_res_", x, ".rds"))
               }
             })) 
-fmt_tbl(summarize_res(loprev_spa_res)) %>% writeLines("paper/figures/loprev-area-level-model-res.tex")
+fmt_tbl(summarize_res(loprev_spa_res), methods = selected_methods) %>%
+  writeLines("paper/figures/loprev-area-level-model-res.tex")
+
+summarize_res(loprev_spa_res) %>%
+  left_join(summarize_res(spa_res) %>% 
+              setNames(paste0("med_", colnames(.))), 
+            by =  c("method" = "med_method")) %>%
+  arrange(match(method, pub_order)) %>%
+  filter(method %in% selected_methods) %>%
+  mutate(method = 
+           pub_names$publication[match(method, pub_names$internal)]) %>%
+  mutate(rmse = rmse * 100, abs_bias = abs_bias * 100, 
+         int_len = int_len * 100, cov90 = cov90 * 100,
+         med_rmse = med_rmse * 100, med_abs_bias = med_abs_bias * 100, 
+         med_int_len = med_int_len * 100, med_cov90 = med_cov90 * 100) %>%
+  knitr::kable(digits = c(0, 2, 2, 0, 2, 2, 2, 0, 2), format = "latex", booktabs = T,
+               linesep = "") %>%
+  writeLines("paper/figures/combined_sim_results_table.tex")
+
