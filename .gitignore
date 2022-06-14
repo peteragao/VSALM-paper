@@ -37,3 +37,18 @@ vignettes/*.pdf
 
 # R Environment Variables
 .Renviron
+
+
+.DS_Store
+logs/
+*.err
+*.out
+*.sbatch
+*.bib
+
+
+slides/
+
+data/
+results/
+paper/submissions
