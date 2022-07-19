@@ -13,7 +13,7 @@ home_dir <- '~/'
 if (!("Dropbox" %in% list.files("~"))) {
   home_dir <- "~/../../mnt/beegfs/homes/petergao/"
 }
-
+#setwd(paste0(home_dir, "VSALM-paper"))
 ### SET TO LOCATION
 sim_res_dir <- "../BALM-SAE/results/cluster/sims/area-level-models/"
 summarize_res <- function(res) {

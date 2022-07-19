@@ -38,9 +38,6 @@ proj_data_dir <-  paste0("./data/" , country, "/", sep="")
 dir.create(file.path(proj_data_dir), showWarnings = FALSE)
 country_res_dir <-  paste0(res_dir , country, "/", sep="")
 dir.create(file.path(country_res_dir), showWarnings = FALSE)
-# link to the main dropbox folder for population rasters 
-pop_raw_dir <- paste0(country_dir, 'Population/')
-cov_raw_dir <- paste0(country_dir, 'covariates/')
 #### 1 GENERATE POPULATION #####################################################
 #### 1.1 LOAD NIGERIA INFO #####################################################
 country <- "Nigeria"
@@ -104,7 +101,7 @@ if(exists("poly_adm2")){
 
 #### 1.2 DHS DATA ##############################################################
 if (TRUE) {
-  svy_dat <- readRDS(paste0(proj_data_dir, "clean_DHS_data_DELETE-ME.rds"))
+  svy_dat <- readRDS(paste0(proj_data_dir, "clean_DHS_data_mcv.rds"))
 } else {
   #### 1.2.1 Load EA locations ####
   ea_locs_path <- paste0(country_dir, "dhsFlat/", dhsFlat_file)
@@ -196,7 +193,7 @@ if (TRUE) {
   # add number of trials
   svy_dat$n_trials <- 1
   saveRDS(svy_dat,
-          file = paste0(proj_data_dir, "clean_DHS_data_DELETE-ME.rds"))
+          file = paste0(proj_data_dir, "clean_DHS_data_mcvE.rds"))
 }
 svy_dat$DHSadm1 <- stringr::str_sub(svy_dat$stratum, end = -7)
 
