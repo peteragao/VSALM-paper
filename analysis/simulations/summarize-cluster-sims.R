@@ -135,3 +135,14 @@ summarize_res(loprev_spa_res) %>%
                linesep = "") %>%
   writeLines("paper/figures/combined_sim_results_table.tex")
 
+
+pop_dat <- readRDS(paste0(sim_res_dir, "spatial_pop_dat.rds"))
+cov_dat <- pop_dat %>%
+  select(id_cluster, lon, lat, x1_ns, x1_ns_sig, x1_BYM2, x2_BYM2, x1_SPDE) %>%
+  setNames(c("id_cluster", "lon", "lat", "X1", "X2", "X3", "X4", "X5")) %>%
+  pivot_longer(cols = c("X1", "X2", "X3", "X4", "X5")) %>%
+  rename(Covariate = name, Cov_val = value)
+cov_sf <- st_as_sf(cov_dat, coords = c("lon", "lat"))
+temp<-ggplot(cov_sf, aes(color = Cov_val)) + geom_sf(size = .08) +
+  facet_wrap(~Covariate) + scale_color_viridis_c(option = "inferno")
+ggsave(paste0("paper/figures/covariate_maps.png"), temp, dpi = 600, width = 10, height = 6) 
