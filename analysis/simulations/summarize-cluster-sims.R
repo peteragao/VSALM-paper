@@ -144,5 +144,5 @@ cov_dat <- pop_dat %>%
   rename(Covariate = name, Cov_val = value)
 cov_sf <- st_as_sf(cov_dat, coords = c("lon", "lat"))
 temp<-ggplot(cov_sf, aes(color = Cov_val)) + geom_sf(size = .08) +
-  facet_wrap(~Covariate) + scale_color_viridis_c(option = "inferno")
+  facet_wrap(~Covariate) + scale_color_viridis_c(option = "inferno", name = "Value")
 ggsave(paste0("paper/figures/covariate_maps.png"), temp, dpi = 600, width = 10, height = 6) 
