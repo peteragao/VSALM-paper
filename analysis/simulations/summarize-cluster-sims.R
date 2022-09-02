@@ -119,6 +119,19 @@ loprev_spa_res <-
 fmt_tbl(summarize_res(loprev_spa_res), methods = selected_methods) %>%
   writeLines("paper/figures/loprev-area-level-model-res.tex")
 
+sim_res_dir <- "results/cluster/sims/lgsample-area-level-models/"
+spa_res <- 
+  do.call(rbind,
+          lapply(
+            1:1000,
+            function(x) {
+              if (file.exists(paste0(sim_res_dir, "lgsample-area-level-model_res_", x, ".rds"))) {
+                readRDS(paste0(sim_res_dir, "lgsample-area-level-model_res_", x, ".rds"))
+              }
+            })) 
+fmt_tbl(summarize_res(spa_res)) %>% writeLines("results/figures/lgsample-area-level-model-res.tex")
+
+
 summarize_res(loprev_spa_res) %>%
   left_join(summarize_res(spa_res) %>% 
               setNames(paste0("med_", colnames(.))), 
