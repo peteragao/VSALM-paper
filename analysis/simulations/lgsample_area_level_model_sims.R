@@ -21,7 +21,7 @@ res_dir <- "results/"
 dir.create(file.path(res_dir), showWarnings = FALSE)
 sim_res_dir <- "results/sims/"
 dir.create(file.path(sim_res_dir), showWarnings = FALSE)
-sim_res_dir <- "results/sims/area-level-models/"
+sim_res_dir <- "results/sims/lgsample-area-level-models/"
 dir.create(file.path(sim_res_dir), showWarnings = FALSE)
 #### 1 GENERATE POPULATION #####################################################
 
@@ -111,6 +111,7 @@ gen_ea_locs <- function(N = 73000) {
   }
   return(do.call(rbind, pop_dat_list))
 }
+
 
 #' Simulate from Besag model
 #'
@@ -259,7 +260,7 @@ gen_pop_X <- function(ea_locs) {
 
 gen_pop_Y <- function(pop_dat, eta_a_sd = .25,
                       e_ac_sd = .5,
-                      beta = c(SUMMER::logit(.1), .25, -.25, .5, .25, .25, 0, 0, 0)) {
+                      beta = c(SUMMER::logit(.5), .25, -.25,  .5, .25, .25, 0, 0, 0)) {
   N <- nrow(pop_dat)
   pop_dat$l1a = log(1 + pop_dat$access)
   pop_X <- model.matrix(~ x1_ns + x1_ns_sig + x1_BYM2 + x2_BYM2 + 
@@ -274,7 +275,6 @@ gen_pop_Y <- function(pop_dat, eta_a_sd = .25,
   pop_dat$y <- rbinom(nrow(pop_dat), 1, prob = pop_dat$p)
   return(pop_dat)
 }
-
 
 gen_sample_ind <- 
   function(
@@ -301,8 +301,6 @@ gen_sample_ind <-
     
     return(list(ind = sample_dat$id_cluster, pop_dat = pop_dat))
   }
-
-
 #### RUN SIMULATIONS ####
 run_one_sim <- function(sample_ind, pop_dat_X, pop_gen_fn, i, ...) {
   pop_dat_Y <- pop_gen_fn(pop_dat_X, ...)
@@ -461,23 +459,16 @@ if (!file.exists(paste0(sim_res_dir, "spatial_pop_dat.rds"))) {
   pop_dat <- readRDS(paste0(sim_res_dir, "spatial_pop_dat.rds"))
 }
 set.seed(0412)
-sample_ind_res <- gen_sample_ind(pop_dat, ~id_stratum, rep(4, 73))
+sample_ind_res <- gen_sample_ind(pop_dat, ~id_stratum, rep(25, 73))
 sample_ind <- sample_ind_res$ind
 pop_dat <- sample_ind_res$pop_dat
 
-# t <- Sys.time()
-# temp <- run_one_sim(sample_ind,  pop_dat, gen_pop_Y, 1)
-# Sys.time() - t
-# temp %>%
-#   group_by(method) %>%
-#   summarize(rmse = sqrt(mean((median-pop_mean)^2)),
-#             cov = mean(lower < pop_mean & upper > pop_mean))
 args = commandArgs(TRUE)
 # supplied at the command line
 k = as.numeric(args[1])
-set.seed(k)
+set.seed(k)    
 res <- do.call(
   rbind,
-  lapply(1:5, function(i) run_one_sim(sample_ind,  pop_dat, gen_pop_Y, i + (k - 1) * 10))
-)
-saveRDS(res, paste0(sim_res_dir, "loprev-area-level-model_res_", k, ".rds"))
+  lapply(1:1, function(i) run_one_sim(sample_ind,  pop_dat, gen_pop_Y, i + (k - 1) * 10))
+  )
+saveRDS(res, paste0(sim_res_dir, "lgsample-area-level-model_res_", k, ".rds"))

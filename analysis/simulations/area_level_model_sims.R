@@ -8,22 +8,20 @@ library(INLA)
 library(survey)
 library(purrr)
 library(rgdal)
-#library(geosphere)
 library(raster)
 library(rstan)
+library(sampling)
 #### FILE MANAGEMENT ####
 home_dir <- '~/'
 if (!("Dropbox" %in% list.files("~"))) {
   home_dir <- "~/../../mnt/beegfs/homes/petergao/"
 }
-setwd(paste0(home_dir, "Dropbox/BALM-SAE/"))
+setwd(paste0(home_dir, "Dropbox/VSALM-paper/"))
 res_dir <- "results/"
 dir.create(file.path(res_dir), showWarnings = FALSE)
-cluster_res_dir <- "results/cluster/"
-dir.create(file.path(cluster_res_dir), showWarnings = FALSE)
-sim_res_dir <- "results/cluster/sims/"
+sim_res_dir <- "results/sims/"
 dir.create(file.path(sim_res_dir), showWarnings = FALSE)
-sim_res_dir <- "results/cluster/sims/area-level-models/"
+sim_res_dir <- "results/sims/area-level-models/"
 dir.create(file.path(sim_res_dir), showWarnings = FALSE)
 #### 1 GENERATE POPULATION #####################################################
 
@@ -96,7 +94,7 @@ gen_ea_locs <- function(N = 73000) {
   for (i in 1:37) {
     print(i)
     pix_dat_i <- 
-      readRDS(paste0("../data-SMA-SAE/Nigeria/nga_pix_tbl_admin1_", i, ".rds")) %>%
+      readRDS(paste0("data/Nigeria/cleaned/nga_pix_tbl_admin1_", i, ".rds")) %>%
       filter(!is.na(access) & !is.na(poverty))
     pop_dat_list[[i]] <- pix_dat_i %>%
       group_by(urban) %>%   
@@ -286,61 +284,22 @@ gen_sample_ind <-
     strata_vec <- as.vector(model.matrix(strata, pop_dat)[, 2])
     N_S <- length(unique(strata_vec))
     pop_dat$n_cl <- n_cl_vec[match(pop_dat$id_stratum, 1:N_S)]
+    
     pop_dat <- pop_dat %>%
       group_by(id_stratum) %>%
-      mutate(pop_s = sum(cl_size)) %>%
-      ungroup() %>%
-      group_by(id_stratum, n_cl, cl_size) %>%
-      mutate(pi = n_cl * cl_size / pop_s, 
+      mutate(pop_s = sum(cl_size),
+             pi = inclusionprobabilities(1 + cl_size, n_cl), 
              wt = 1 / pi) %>%
       ungroup() 
     sample_dat <- pop_dat %>%
-      group_by(id_stratum, n_cl) %>%
-      nest() %>% 
-      mutate(samp = 
-               map(data,
-                   function(x) 
-                     slice_sample(x, n = n_cl,
-                                  weight_by = pi, replace = F)))  %>%
-      dplyr::select(-data) %>%
-      unnest(samp) %>%
-      ungroup()
+      group_by(id_stratum) %>%
+      mutate(samp_ind = UPmaxentropy(pi)) %>%
+      filter(samp_ind == 1) %>%
+      ungroup() %>%
+      dplyr::select(-samp_ind)
 
     return(list(ind = sample_dat$id_cluster, pop_dat = pop_dat))
   }
-gen_sample_ind_inf <- 
-  function(
-    pop_dat, strata,
-    prop_sample_per_strata = .02
-  ) {
-    strata_vec <- as.vector(model.matrix(strata, pop_dat)[, 2])
-    n_strata <- length(unique(strata_vec))
-    pop_dat$strata <- strata_vec
-    pop_dat$idx <- 1:nrow(pop_dat)
-    ns_per_area_table <- pop_dat %>%
-      group_by(strata) %>%
-      summarize(n = round(n() * prop_sample_per_strata))
-    ns_per_area <- ns_per_area_table$n
-    pop_dat <- pop_dat %>%
-      mutate(a = 1 + 1 * exp(x2_SPDE) + 1 * exp(x1_BYM2)) %>%
-      left_join(ns_per_area_table, by = "strata") %>%
-      group_by(strata) %>%  
-      mutate(wt = sum(a) / a / n) %>%
-      ungroup()
-    sample_dat <- pop_dat %>%
-      group_by(strata) %>%  
-      nest() %>%             
-      ungroup() %>% 
-      mutate(samp = 
-               map2(data, ns_per_area,
-                    function(x, y) 
-                      slice_sample(x, n = y,
-                                   weight_by = 1/x$wt))) %>%
-      dplyr::select(-data) %>%
-      unnest(samp)
-    return(list(ind = sample_dat$idx, pop_dat = pop_dat))
-  }
-
 #### RUN SIMULATIONS ####
 run_one_sim <- function(sample_ind, pop_dat_X, pop_gen_fn, i, ...) {
   pop_dat_Y <- pop_gen_fn(pop_dat_X, ...)
